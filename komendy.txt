@@ -1,0 +1,32 @@
+INSTALACJA:
+sudo apt update
+sudo apt upgrade -y
+
+URUCHOMIENIE INSTALATORA:
+sudo bash instaluj.sh
+
+URUCHOMIENIE TESTOW:
+sudo bash sprawdz.sh
+
+SPRAWDZANIE SIECI:
+ip a
+ip route
+ip -br link
+
+SPRAWDZANIE SSH:
+systemctl status ssh
+
+SPRAWDZANIE APACHE:
+systemctl status apache2
+
+SPRAWDZANIE SAMBA:
+systemctl status smbd
+
+SPRAWDZANIE STRONY:
+curl http://localhost:10000
+
+SPRAWDZANIE UDZIALU:
+smbclient -L localhost -U egzamin4
+
+SPRAWDZANIE ARCHIWUM:
+ls -l /pliki_egzaminu
