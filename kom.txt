@@ -1,0 +1,182 @@
+# EGZAMIN UBUNTU SERVER – ALAN – STANOWISKO 4
+
+## 1. Instalacja usług
+
+```bash
+sudo apt update
+sudo apt install openssh-server apache2 lynx samba smbclient -y
+sudo systemctl enable --now ssh apache2 smbd
+```
+
+## 2. Strona WWW
+
+```bash
+sudo mkdir -p /egzamin/www
+echo "Egzamin Alan" | sudo tee /egzamin/www/index.html
+sudo chown -R www-data:www-data /egzamin
+sudo find /egzamin -type d -exec chmod 754 {} \;
+sudo find /egzamin -type f -exec chmod 754 {} \;
+```
+
+## 3. Apache – dodatkowy port 10000
+
+```bash
+sudo nano /etc/apache2/ports.conf
+```
+
+Dodaj linię:
+```text
+Listen 10000
+```
+
+Utwórz konfigurację:
+
+```bash
+sudo nano /etc/apache2/sites-available/egzamin.conf
+```
+
+Wklej:
+
+```apache
+<VirtualHost *:10000>
+    DocumentRoot /egzamin/www
+    <Directory /egzamin/www>
+        Require all granted
+    </Directory>
+</VirtualHost>
+```
+
+Zapisz i wykonaj:
+
+```bash
+sudo a2ensite egzamin.conf
+sudo apache2ctl configtest
+sudo systemctl restart apache2
+lynx -dump http://localhost:10000
+```
+
+## 4. Użytkownik Samba
+
+```bash
+sudo adduser egzamin4
+sudo smbpasswd -a egzamin4
+```
+
+Hasło użytkownika i Samby: `1234`
+
+## 5. Udział Samba
+
+```bash
+sudo mkdir -p /pliki_egzaminu
+sudo chown egzamin4:egzamin4 /pliki_egzaminu
+sudo chmod 755 /pliki_egzaminu
+sudo nano /etc/samba/smb.conf
+```
+
+Na końcu pliku dodaj:
+
+```ini
+[pliki_egzaminu]
+   path = /pliki_egzaminu
+   browseable = yes
+   read only = no
+   valid users = egzamin4
+   create mask = 0755
+   directory mask = 0755
+```
+
+Zapisz i wykonaj:
+
+```bash
+sudo testparm
+sudo systemctl restart smbd
+```
+
+## 6. Archiwum strony
+
+```bash
+sudo tar -czf /pliki_egzaminu/strona.tar.gz -C /egzamin www
+sudo chown egzamin4:egzamin4 /pliki_egzaminu/strona.tar.gz
+```
+
+## 7. Sieć – druga karta
+
+Sprawdź interfejsy:
+
+```bash
+ip -br link
+ip -br addr
+ip route
+```
+
+Otwórz konfigurację:
+
+```bash
+ls /etc/netplan/
+sudo nano /etc/netplan/NAZWA_PLIKU.yaml
+```
+
+Skonfiguruj drugą kartę:
+
+- IP: `10.4.0.1/16`
+- DNS: `8.8.8.8`, `8.8.4.4`
+- Brama: `10.4.255.254`
+
+Zachowaj konfigurację pierwszej karty! Nazwę drugiej karty odczytaj przez `ip -br link`.
+
+Sprawdź i zastosuj:
+
+```bash
+sudo netplan generate
+sudo netplan try
+```
+
+Jeśli wszystko działa, zaakceptuj Enterem.
+
+## 8. Zapis informacji o sieci na pendrive
+
+Sprawdź pendrive:
+
+```bash
+lsblk -f
+```
+
+Utwórz punkt montowania:
+
+```bash
+sudo mkdir -p /mnt/pendrive
+```
+
+Zamontuj właściwą partycję pendrive (przykład):
+
+```bash
+sudo mount /dev/sdb1 /mnt/pendrive
+```
+
+Zapisz informacje:
+
+```bash
+{
+echo "Alan - stanowisko 4"
+ip -br addr
+ip route
+resolvectl status
+} | sudo tee /mnt/pendrive/Alan-IP.txt
+```
+
+Zapisz i odmontuj:
+
+```bash
+sync
+sudo umount /mnt/pendrive
+```
+
+## 9. Końcowe sprawdzenie
+
+```bash
+systemctl is-active ssh apache2 smbd
+lynx -dump http://localhost:10000
+sudo testparm
+ls -l /pliki_egzaminu
+ip -br addr
+```
