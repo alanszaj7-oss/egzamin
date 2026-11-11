@@ -1,0 +1,304 @@
+EGZAMIN UBUNTU SERVER – KOMENDY
+
+Dane egzaminacyjne:
+
+Użytkownik Samba: egzamin4
+
+Hasło Samba: 1234
+
+Strona WWW: Egzamin Alan
+
+Port dodatkowej strony: 10000
+
+Katalog strony: /egzamin/www
+
+Katalog Samba: /pliki_egzaminu
+
+IP drugiej karty: 10.4.0.1/16
+
+Brama: 10.4.255.254
+
+DNS: 8.8.8.8 oraz 8.8.4.4
+
+Plik na USB: Alan-IP.txt
+
+1. Aktualizacja i instalacja
+
+sudo apt update
+sudo apt upgrade -y
+sudo apt install git -y
+sudo apt install openssh-server apache2 lynx samba smbclient curl -y
+
+Włączenie SSH:
+
+sudo systemctl enable --now ssh
+sudo systemctl status ssh
+
+2. Pobranie repozytorium GitHub
+
+Pierwsze pobranie:
+
+git clone ADRES_REPOZYTORIUM
+cd egzamin-ubuntu
+
+Aktualizacja pobranych plików:
+
+cd ~/egzamin-ubuntu
+git pull
+
+Wyświetlenie plików:
+
+ls -la
+
+3. Automatyczna instalacja egzaminu
+
+Uruchomienie głównego skryptu:
+
+sudo bash instaluj.sh
+
+Sprawdzenie usług:
+
+sudo systemctl status ssh
+sudo systemctl status apache2
+sudo systemctl status smbd
+
+4. Apache – strona internetowa
+
+Katalog strony:
+
+sudo mkdir -p /egzamin/www
+
+Utworzenie strony:
+
+echo "Egzamin Alan" | sudo tee /egzamin/www/index.html
+
+Właściciel:
+
+sudo chown -R www-data:www-data /egzamin
+
+Uprawnienia:
+
+sudo chmod 754 /egzamin
+sudo find /egzamin/www -type d -exec chmod 754 {} \;
+sudo find /egzamin/www -type f -exec chmod 754 {} \;
+
+Sprawdzenie portu:
+
+sudo ss -lntp | grep ':10000'
+
+Test strony:
+
+curl http://localhost:10000
+lynx -dump http://localhost:10000
+
+Sprawdzenie konfiguracji Apache:
+
+sudo apache2ctl configtest
+
+Restart:
+
+sudo systemctl restart apache2
+
+Strona domyślna:
+
+curl http://localhost
+
+5. Samba – użytkownik i udział
+
+Utworzenie użytkownika:
+
+sudo adduser egzamin4
+
+Dodanie użytkownika do Samby:
+
+sudo smbpasswd -a egzamin4
+
+Włączenie konta Samba:
+
+sudo smbpasswd -e egzamin4
+
+Utworzenie katalogu:
+
+sudo mkdir -p /pliki_egzaminu
+
+Właściciel katalogu:
+
+sudo chown egzamin4:egzamin4 /pliki_egzaminu
+
+Uprawnienia:
+
+sudo chmod 755 /pliki_egzaminu
+
+Edycja konfiguracji Samby:
+
+sudo nano /etc/samba/smb.conf
+
+Sekcja udziału do dodania na końcu:
+
+[pliki_egzaminu]
+   path = /pliki_egzaminu
+   browseable = yes
+   read only = no
+   writable = yes
+   valid users = egzamin4
+   create mask = 0755
+   directory mask = 0755
+
+Sprawdzenie konfiguracji:
+
+sudo testparm
+
+Restart Samby:
+
+sudo systemctl enable --now smbd
+sudo systemctl restart smbd
+
+Test udziału:
+
+smbclient -L localhost -U egzamin4
+
+6. Archiwum strony WWW
+
+Utworzenie archiwum:
+
+sudo tar -czf /pliki_egzaminu/strona_egzamin.tar.gz -C /egzamin www
+
+Ustawienie właściciela:
+
+sudo chown egzamin4:egzamin4 /pliki_egzaminu/strona_egzamin.tar.gz
+
+Sprawdzenie:
+
+ls -l /pliki_egzaminu
+
+7. Sieć – sprawdzenie kart
+
+Wyświetlenie kart:
+
+ip -br link
+
+Wyświetlenie adresów:
+
+ip -br address
+
+Wyświetlenie tras:
+
+ip route
+
+Wyświetlenie DNS:
+
+resolvectl status
+
+Wymagane ustawienia drugiej karty:
+
+IP: 10.4.0.1/16
+
+Brama: 10.4.255.254
+
+DNS: 8.8.8.8
+
+DNS: 8.8.4.4
+
+Konfigurację wykonuj przez Netplan, zachowując konfigurację pierwszej karty. Nie kopiuj nazwy interfejsu z przykładu bez sprawdzenia.
+
+Sprawdzenie składni Netplan:
+
+sudo netplan generate
+
+Bezpieczna próba:
+
+sudo netplan try
+
+Zastosowanie:
+
+sudo netplan apply
+
+8. Pendrive – wykrywanie i zapis
+
+Wyświetlenie dysków i pendrive:
+
+lsblk -o NAME,TRAN,RM,SIZE,FSTYPE,LABEL,MOUNTPOINTS
+
+Utworzenie katalogu montowania:
+
+sudo mkdir -p /mnt/pendrive
+
+Przykładowe podłączenie partycji – najpierw sprawdź jej nazwę przez lsblk:
+
+sudo mount /dev/sdb1 /mnt/pendrive
+
+Zapis adresów IP:
+
+ip a | sudo tee /mnt/pendrive/Alan-IP.txt
+
+Zapis danych:
+
+sync
+
+Odłączenie pendrive:
+
+sudo umount /mnt/pendrive
+
+Automatyczny zapis, jeśli plik pendrive.sh jest w bieżącym katalogu:
+
+sudo bash pendrive.sh
+
+9. Sprawdzenie całego egzaminu
+
+Uruchomienie skryptu sprawdzającego:
+
+sudo bash sprawdz.sh
+
+Sprawdzenie usług:
+
+systemctl is-active ssh apache2 smbd
+
+Sprawdzenie strony:
+
+curl http://localhost:10000
+
+Sprawdzenie portu:
+
+sudo ss -lntp | grep ':10000'
+
+Sprawdzenie użytkownika:
+
+id egzamin4
+
+Sprawdzenie właściciela i uprawnień:
+
+stat -c '%A %a %U:%G %n' /egzamin /egzamin/www /egzamin/www/index.html
+
+Sprawdzenie archiwum:
+
+ls -lh /pliki_egzaminu/strona_egzamin.tar.gz
+
+10. Przydatne polecenia naprawcze
+
+Restart Apache:
+
+sudo systemctl restart apache2
+
+Restart Samby:
+
+sudo systemctl restart smbd
+
+Restart SSH:
+
+sudo systemctl restart ssh
+
+Sprawdzenie błędów Apache:
+
+sudo journalctl -u apache2 -n 30
+
+Sprawdzenie błędów Samby:
+
+sudo journalctl -u smbd -n 30
+
+Sprawdzenie miejsca na dysku:
+
+df -h
+
+Wyświetlenie historii poleceń:
+
+history
